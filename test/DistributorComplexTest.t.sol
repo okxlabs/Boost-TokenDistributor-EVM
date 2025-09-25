@@ -115,7 +115,7 @@ contract DistributorComplexTest is Test {
 
         // 1. Create distributor contract
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         console.log("Distributor contract created at:", distributorAddress);
         console.log("Initial token balance:", token.balanceOf(distributorAddress));
@@ -245,7 +245,7 @@ contract DistributorComplexTest is Test {
 
         // Create distributor
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Generate main Merkle tree
         (bytes32 merkleRoot, bytes32[] memory aliceProof, , ) = _generateMerkleTreeForThreeUsers();
@@ -281,7 +281,7 @@ contract DistributorComplexTest is Test {
      */
     function test_ThreeUsersEdgeCases() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Generate tree
         (bytes32 merkleRoot, , , ) = _generateMerkleTreeForThreeUsers();
