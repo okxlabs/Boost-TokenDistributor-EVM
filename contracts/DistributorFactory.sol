@@ -12,17 +12,25 @@ import "./TokenDistributor.sol";
  *      3. Factory contract automatically transfers tokens to the newly created distribution contract
  *      4. Operator can set merkle root in the distribution contract
  *      5. Users claim their rewards by providing merkle proofs
+ *      6. Supports both ERC20 tokens and native tokens for distribution
  */
 contract DistributorFactory {
     using SafeERC20 for IERC20;
+
+    /// @notice Native token identifier address
+    address constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice Check if an address is a distributor contract created by this factory
     mapping(address => bool) public isDistributor;
 
     // Custom errors for gas-efficient error handling
+    error AmountMismatch(); // Amount mismatch
+    error InvalidAmount(); // Invalid amount
     error InvalidOperator(); // Invalid operator address
     error InvalidToken(); // Invalid token address
     error InvalidTotalAmount(); // Invalid total reward amount
+    error NativeSendFailed(); // Native token send failed
+    error UnexpectedNative(); // Unexpected Native token
 
     /**
      * @notice Emitted when a new distributor contract is created
@@ -39,10 +47,14 @@ contract DistributorFactory {
      *      After creation, the specified amount of tokens will be automatically transferred to the new contract
      * @param token Reward token address
      * @param operator Operator address, responsible for setting merkle root and start time
-     * @param initialTotalAmount Total reward amount, caller must have sufficient token balance and approval
+     * @param initialTotalAmount Total reward amount, caller must have sufficient balance/approval for ERC20 or send native tokens
      * @return distributorAddress Address of the newly created distributor contract
      */
-    function createDistributor(address token, address operator, uint256 initialTotalAmount) external returns (address distributorAddress) {
+    function createDistributor(
+        address token,
+        address operator,
+        uint256 initialTotalAmount
+    ) external payable returns (address distributorAddress) {
         if (token == address(0)) revert InvalidToken();
         if (operator == address(0)) revert InvalidOperator();
         if (initialTotalAmount == 0) revert InvalidTotalAmount();
@@ -57,9 +69,19 @@ contract DistributorFactory {
                 initialTotalAmount // initialTotalAmount: total reward amount
             )
         );
+        if (token == ETH_ADDRESS) {
+            // Validate that caller sent the exact amount required for Native token distribution
+            if (msg.value != initialTotalAmount) revert AmountMismatch();
 
-        // Transfer tokens from creator to the distribution contract
-        IERC20(token).safeTransferFrom(msg.sender, distributorAddress, initialTotalAmount);
+            // Transfer Native token to the distribution contract
+            (bool success, ) = payable(distributorAddress).call{value: initialTotalAmount}("");
+            if (!success) revert NativeSendFailed();
+        } else {
+            // Validate that caller did not send Native token
+            if(msg.value > 0) revert UnexpectedNative();
+            // Transfer tokens from creator to the distribution contract
+            IERC20(token).safeTransferFrom(msg.sender, distributorAddress, initialTotalAmount);
+        }
 
         // Record the newly created distribution contract
         isDistributor[distributorAddress] = true;

@@ -199,7 +199,7 @@ contract DistributorTest is Test {
         token.approve(address(factory), TOTAL_AMOUNT);
 
         address distributorAddress = factory.createDistributor(address(token), operator, TOTAL_AMOUNT);
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Verify constructor parameters
         assertEq(distributor.owner(), owner);
@@ -212,7 +212,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_Success() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 futureTime = block.timestamp + 1 days;
 
@@ -225,7 +225,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_OnlyOperator() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         vm.prank(user1);
         vm.expectRevert(TokenDistributor.OnlyOperator.selector);
@@ -234,7 +234,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_AlreadyStarted() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 futureTime = block.timestamp + 1 days;
 
@@ -253,7 +253,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_PastTime() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         vm.prank(operator);
         vm.expectRevert(TokenDistributor.InvalidTime.selector);
@@ -262,7 +262,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_ExceedsMaxTimeLimit() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Try to set time beyond 90 days limit
         uint256 invalidFutureTime = block.timestamp + 91 days;
@@ -274,7 +274,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_WithinMaxTimeLimit() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Set time exactly at 90 days limit (should succeed)
         uint256 validFutureTime = block.timestamp + 90 days;
@@ -288,7 +288,7 @@ contract DistributorTest is Test {
 
     function test_SetStartTime_CanSetMultipleTimes() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 firstTime = block.timestamp + 1 days;
         uint256 secondTime = block.timestamp + 2 days;
@@ -315,7 +315,7 @@ contract DistributorTest is Test {
 
     function test_SetMerkleRoot_Success() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         bytes32 newRoot = keccak256("test");
 
@@ -327,7 +327,7 @@ contract DistributorTest is Test {
 
     function test_SetMerkleRoot_OnlyOperator() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         bytes32 newRoot = keccak256("test");
 
@@ -338,7 +338,7 @@ contract DistributorTest is Test {
 
     function test_SetMerkleRoot_ZeroRoot() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         vm.prank(operator);
         vm.expectRevert(TokenDistributor.InvalidRoot.selector);
@@ -347,7 +347,7 @@ contract DistributorTest is Test {
 
     function test_SetMerkleRoot_Update() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         bytes32 root1 = keccak256("test1");
         bytes32 root2 = keccak256("test2");
@@ -363,7 +363,7 @@ contract DistributorTest is Test {
 
     function test_Claim_Success() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Setup
         uint256 startTime = block.timestamp + 1 hours;
@@ -391,7 +391,7 @@ contract DistributorTest is Test {
 
     function test_Claim_StartTimeNotSet() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         bytes32[] memory proof = new bytes32[](0);
 
@@ -402,7 +402,7 @@ contract DistributorTest is Test {
 
     function test_Claim_TooEarly() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -418,7 +418,7 @@ contract DistributorTest is Test {
 
     function test_Claim_TooLate() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -437,7 +437,7 @@ contract DistributorTest is Test {
 
     function test_Claim_NoMerkleRoot() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -455,7 +455,7 @@ contract DistributorTest is Test {
 
     function test_Claim_InvalidAmount() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
         bytes32 merkleRoot = keccak256("test");
@@ -477,7 +477,7 @@ contract DistributorTest is Test {
 
     function test_Claim_InvalidProof() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
         bytes32 merkleRoot = keccak256("different");
@@ -499,7 +499,7 @@ contract DistributorTest is Test {
 
     function test_Claim_AlreadyClaimed() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
@@ -526,7 +526,7 @@ contract DistributorTest is Test {
 
     function test_Claim_PartialClaim() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
         uint256 firstAmount = 100 * 10 ** 18;
@@ -566,7 +566,7 @@ contract DistributorTest is Test {
 
     function test_Withdraw_Success() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -588,7 +588,7 @@ contract DistributorTest is Test {
 
     function test_Withdraw_OnlyOwner() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -604,7 +604,7 @@ contract DistributorTest is Test {
 
     function test_Withdraw_BeforeStartTime_Success() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // When startTime is 0, endTime is also 0, so block.timestamp > 0 is always true
         uint256 balanceBefore = token.balanceOf(owner);
@@ -619,7 +619,7 @@ contract DistributorTest is Test {
 
     function test_Withdraw_DuringAirdropPeriod_Fails() public {
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         uint256 startTime = block.timestamp + 1 hours;
 
@@ -640,7 +640,7 @@ contract DistributorTest is Test {
     function test_FullWorkflow() public {
         // Create distributor
         address distributorAddress = _createDistributor();
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Set up campaign
         uint256 startTime = block.timestamp + 1 hours;
@@ -686,7 +686,7 @@ contract DistributorTest is Test {
         address distributorAddress = factory.createDistributor(address(token), operator, largeAmount);
         vm.stopPrank();
 
-        TokenDistributor distributor = TokenDistributor(distributorAddress);
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
 
         // Set up campaign
         uint256 startTime = block.timestamp + 1 hours;

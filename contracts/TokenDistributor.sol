@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @title TokenDistributor - Merkle tree based token distribution contract
  * @notice This contract allows users to claim tokens based on merkle proofs
  * @dev The contract uses merkle trees to efficiently distribute tokens to a large number of recipients
- *      Only the operator can set the merkle root and start time
- *      Only the owner can withdraw remaining tokens after the distribution period ends
+ *      Operator sets merkle root and start time, owner withdraws remaining tokens when distribution ends or hasn't started
+ *      Supports both ERC20 tokens and native tokens for distribution
  */
 contract TokenDistributor is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -20,6 +20,9 @@ contract TokenDistributor is ReentrancyGuard {
 
     /// @notice Maximum allowed start time offset from current time (90 days)
     uint256 public constant MAX_START_TIME = 90 days;
+
+    /// @notice Native token identifier address
+    address constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // ============ Immutable Variables ============
 
@@ -58,6 +61,8 @@ contract TokenDistributor is ReentrancyGuard {
     error InvalidProof(); // Invalid merkle proof
     error InvalidRoot(); // Invalid merkle root
     error InvalidTime(); // Invalid timestamp
+    error NativeSendFailed(); // Native token send failed
+    error NativeNotAccepted(); // Native token not accepted
     error NoRoot(); // Merkle root not set
     error NoTokens(); // No tokens available
     error OnlyOperator(); // Only operator can call this function
@@ -136,10 +141,10 @@ contract TokenDistributor is ReentrancyGuard {
         // Check if distribution has ended or not set the startTime
         if (block.timestamp <= endTime) revert InvalidTime();
 
-        uint256 balance = IERC20(token).balanceOf(address(this));
+        uint256 balance = getBalance();
         if (balance == 0) revert NoTokens();
 
-        IERC20(token).safeTransfer(msg.sender, balance);
+        transfer(msg.sender, balance);
 
         emit Withdrawn(msg.sender, balance);
     }
@@ -177,8 +182,33 @@ contract TokenDistributor is ReentrancyGuard {
         totalClaimed += pendingAmount;
 
         // Transfer tokens to claimant
-        IERC20(token).safeTransfer(msg.sender, pendingAmount);
+        transfer(msg.sender, pendingAmount);
 
         emit Claimed(msg.sender, pendingAmount);
+    }
+
+    
+    /// @notice Get the balance of the contract
+    function getBalance() internal view returns (uint256) {
+        if (token == ETH_ADDRESS) {
+            return address(this).balance;
+        } else {
+            return IERC20(token).balanceOf(address(this));
+        }
+    }
+
+    /// @notice Transfer tokens to a given address
+    function transfer(address to, uint256 amount) internal {
+        if (token == ETH_ADDRESS) {
+            (bool success, ) = payable(to).call{value: amount, gas: 5000}("");
+            if (!success) revert NativeSendFailed();
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+        }
+    }
+
+    /// @dev Accept Native Token
+    receive() external payable {
+        if(token != ETH_ADDRESS) revert NativeNotAccepted();
     }
 }
