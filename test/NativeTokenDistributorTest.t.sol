@@ -185,7 +185,7 @@ contract NativeTokenDistributorTest is Test {
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -213,7 +213,7 @@ contract NativeTokenDistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.warp(startTime + 1 hours);
         
@@ -257,7 +257,7 @@ contract NativeTokenDistributorTest is Test {
         uint256 maxAmount = 1 ether;
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.warp(startTime + 1 hours);
         
@@ -295,7 +295,7 @@ contract NativeTokenDistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         // Fast forward past end time
         vm.warp(startTime + 15 days);
@@ -332,7 +332,7 @@ contract NativeTokenDistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.warp(startTime + 1 days); // During airdrop period (before end time)
         
@@ -349,7 +349,7 @@ contract NativeTokenDistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.warp(startTime + 1 hours);
         
@@ -378,6 +378,7 @@ contract NativeTokenDistributorTest is Test {
         
         // Send ETH directly to the native token distributor
         vm.deal(address(this), additionalAmount);
+        // forge-disable-next-line unchecked-call
         (bool success, ) = distributorAddress.call{value: additionalAmount}("");
         assertTrue(success, "Native distributor should accept ETH");
         
@@ -405,6 +406,7 @@ contract NativeTokenDistributorTest is Test {
         // Try to send ETH to ERC20 distributor - should revert
         vm.expectRevert(TokenDistributor.NativeNotAccepted.selector);
         // @audit Low-level call used intentionally for testing
+        // forge-disable-next-line unchecked-call
         erc20DistributorAddress.call{value: additionalAmount}("");
         
         // Verify balance didn't change
@@ -428,6 +430,7 @@ contract NativeTokenDistributorTest is Test {
         
         // Send multiple ETH transfers
         for (uint i = 0; i < amounts.length; i++) {
+            // forge-disable-next-line unchecked-call
             (bool success, ) = distributorAddress.call{value: amounts[i]}("");
             assertTrue(success, "Native distributor should accept all ETH transfers");
             totalAdditional += amounts[i];
@@ -458,10 +461,12 @@ contract NativeTokenDistributorTest is Test {
         // Both ERC20 distributors should reject ETH
         vm.expectRevert(TokenDistributor.NativeNotAccepted.selector);
         // @audit Low-level call used intentionally for testing
+        // forge-disable-next-line unchecked-call
         distributor1.call{value: amount}("");
         
         vm.expectRevert(TokenDistributor.NativeNotAccepted.selector);
         // @audit Low-level call used intentionally for testing
+        // forge-disable-next-line unchecked-call
         distributor2.call{value: amount}("");
     }
 
@@ -473,12 +478,14 @@ contract NativeTokenDistributorTest is Test {
         uint256 initialBalance = distributorAddress.balance;
         
         // Send zero ETH - should still work
+        // forge-disable-next-line unchecked-call
         (bool success, ) = distributorAddress.call{value: 0}("");
         assertTrue(success, "Native distributor should accept zero ETH");
         assertEq(distributorAddress.balance, initialBalance);
         
         // Test with very small amount
         vm.deal(address(this), 1 wei);
+        // forge-disable-next-line unchecked-call
         (bool success2, ) = distributorAddress.call{value: 1 wei}("");
         assertTrue(success2, "Native distributor should accept 1 wei");
         assertEq(distributorAddress.balance, initialBalance + 1 wei);
@@ -615,7 +622,7 @@ contract NativeTokenDistributorTest is Test {
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
         
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
         
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);

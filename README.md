@@ -10,7 +10,7 @@ contracts/
 └── TokenDistributor.sol      # Core distribution contract with Merkle tree verification
 
 test/
-├── DistributorFactoryTest.t.sol     # Comprehensive unit and integration tests
+├── DistributorTest.t.sol     # Comprehensive unit and integration tests
 ├── DistributorComplexTest.t.sol  # Advanced tests with real Merkle tree verification
 └── NativeTokenDistributorTest.t.sol  # Native token distribution tests
 ```
@@ -46,13 +46,14 @@ A Merkle tree-based token distribution contract with advanced features supportin
 **Key Features:**
 - **Merkle Tree Verification**: Efficient distribution to large recipient lists
 - **Dual Token Support**: Supports both ERC20 tokens and native tokens (ETH)
-- **Time-based Distribution**: Configurable start/end times with 14-day duration
+- **Flexible Time-based Distribution**: Configurable start times with custom duration (1 second to 365 days)
+- **Multi-round Distribution**: Support for multiple distribution rounds using remaining tokens
 - **Incremental Claims**: Support for partial claiming and distribution updates
 - **Access Control**: Separate owner and operator roles
 - **Reentrancy Protection**: Uses OpenZeppelin's ReentrancyGuard
 
 **Core Functions:**
-- `setTime(uint256 _startTime)` - Set distribution start time (operator only)
+- `setTime(uint256 _startTime, uint256 _duration)` - Set distribution start time and duration (operator only)
 - `setMerkleRoot(bytes32 _merkleRoot)` - Set Merkle root for claim validation (operator only)
 - `claim(uint256 maxAmount, bytes32[] calldata proof)` - Claim tokens using Merkle proof
 - `withdraw()` - Withdraw remaining tokens after distribution ends or before it starts (owner only)
@@ -60,13 +61,14 @@ A Merkle tree-based token distribution contract with advanced features supportin
 **Security Features:**
 - Checks-Effects-Interactions pattern
 - Custom errors for gas efficiency
-- Time validation (max 90 days future start time)
+- Time validation (max 90 days future start time, max 365 days duration)
+- Distribution period protection (cannot modify time during active distribution)
 - Merkle proof verification using OpenZeppelin's library
 - Immutable variables for critical parameters
 - Native token handling with proper validation
 
 **Constants:**
-- `DURATION = 14 days` - Distribution period length
+- `MAX_DURATION = 365 days` - Maximum distribution period length
 - `MAX_START_TIME = 90 days` - Maximum future start time
 - `ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` - Native token identifier
 
@@ -87,21 +89,25 @@ Comprehensive test suite covering all contract functionality for both ERC20 and 
 
 **Distributor Core Tests:**
 - Constructor parameter validation
-- Time setting functionality and restrictions
+- Time setting functionality with custom duration and restrictions
+- Duration validation (testing MAX_DURATION limits)
+- Multi-round distribution capabilities
 - Merkle root setting and updates
 - Claim functionality with various scenarios for both token types
 - Withdrawal functionality and access control
 
 **Integration Tests:**
 - Complete workflow from creation to withdrawal
-- Multiple user scenarios
+- Multiple user scenarios with different distribution durations
+- Multi-round distribution workflows using remaining tokens
 - Partial claiming functionality
 - Native token distribution workflows
 
 **Edge Cases:**
 - Invalid proofs and amounts
 - Double claiming prevention
-- Time-based restrictions
+- Time-based restrictions and duration limits
+- Distribution period protection (cannot modify during active distribution)
 - Access control validation
 - Native token edge cases
 
@@ -113,6 +119,9 @@ Advanced test suite with real Merkle tree implementation for ERC20 tokens.
 - **Real Merkle Tree**: Implements actual Merkle tree generation and proof verification
 - **Multi-user Scenarios**: Tests with three users (Alice, Bob, Charlie) with different amounts
 - **Complex Workflows**: End-to-end testing with realistic distribution scenarios
+- **Multi-round Distribution**: Tests multiple distribution rounds using remaining tokens
+- **Duration Testing**: Comprehensive testing of InvalidDuration error conditions
+- **Time Restriction Testing**: Validates distribution period protection logic
 - **Proof Validation**: Tests both valid and invalid Merkle proofs
 - **Partial Claiming**: Demonstrates incremental distribution capabilities
 
@@ -165,9 +174,11 @@ Specialized test suite for native token distribution functionality.
 
 **Flexibility:**
 - Dual token support (ERC20 and native tokens)
-- Configurable distribution periods
+- Configurable distribution periods (1 second to 365 days)
+- Multi-round distribution capabilities
 - Incremental claiming support
 - Operator-controlled distribution parameters
+- Post-distribution token reuse for new campaigns
 
 ## Contributing
 

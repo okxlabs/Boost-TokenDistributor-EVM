@@ -9,14 +9,16 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @title TokenDistributor - Merkle tree based token distribution contract
  * @notice This contract allows users to claim tokens based on merkle proofs
  * @dev The contract uses merkle trees to efficiently distribute tokens to a large number of recipients
- *      Operator sets merkle root and start time, owner withdraws remaining tokens when distribution ends or hasn't started
+ *      Operator sets merkle root, start time and duration, owner withdraws remaining tokens when distribution ends or hasn't started
  *      Supports both ERC20 tokens and native tokens for distribution
  */
 contract TokenDistributor is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    /// @notice Distribution period duration (14 days)
-    uint256 public constant DURATION = 14 days;
+    // ============ Constant Variables ============
+    
+    /// @notice Maximum allowed distribution period duration (365 days)
+    uint256 public constant MAX_DURATION = 365 days;
 
     /// @notice Maximum allowed start time offset from current time (90 days)
     uint256 public constant MAX_START_TIME = 90 days;
@@ -28,9 +30,6 @@ contract TokenDistributor is ReentrancyGuard {
 
     /// @notice Address of the token being distributed
     address public immutable token;
-
-    /// @notice Init Total amount of tokens to be distributed
-    uint256 public immutable initialTotalAmount;
 
     /// @notice Address authorized to set merkle root and start time
     address public immutable operator;
@@ -46,8 +45,7 @@ contract TokenDistributor is ReentrancyGuard {
     /// @notice Total amount of tokens claimed
     uint256 public totalClaimed;
 
-    /// @notice Timestamp when the distribution starts
-    /// @notice Timestamp when the distribution ends
+    /// @notice Timestamp when the distribution starts and ends
     /// @dev Packed together to save storage slot and reduce gas cost
     uint64 public startTime;
     uint64 public endTime;
@@ -55,9 +53,12 @@ contract TokenDistributor is ReentrancyGuard {
     /// @notice Mapping of addresses to their claimed amounts
     mapping(address => uint256) public claimedAmounts;
 
+    // ============ Custom Errors ============
+
     // Custom errors for gas-efficient error handling
     error AlreadyStarted(); // It has already started
     error InvalidAmount(); // Amount cannot be zero
+    error InvalidDuration(); // Invalid duration
     error InvalidProof(); // Invalid merkle proof
     error InvalidRoot(); // Invalid merkle root
     error InvalidTime(); // Invalid timestamp
@@ -71,7 +72,9 @@ contract TokenDistributor is ReentrancyGuard {
     error TooEarly(); // Distribution hasn't started yet
     error TooLate(); // Distribution has ended
 
-    /// @notice Emitted when start time is set
+    // ============ Events ============
+
+    /// @notice Emitted when start time and end time are set
     event TimeSet(uint64 startTime, uint64 endTime);
 
     /// @notice Emitted when merkle root is set
@@ -82,6 +85,8 @@ contract TokenDistributor is ReentrancyGuard {
 
     /// @notice Emitted when remaining tokens are withdrawn
     event Withdrawn(address to, uint256 amount);
+
+    // ============ Modifiers ============
 
     /// @notice Restricts access to operator only
     modifier onlyOperator() {
@@ -95,32 +100,36 @@ contract TokenDistributor is ReentrancyGuard {
         _;
     }
 
+    // ============ Constructor ============
+
     /// @notice Initialize distributor contract
     /// @param _owner Owner address who can withdraw remaining tokens
-    /// @param _operator Operator address who can set merkle root and start time
+    /// @param _operator Operator address who can set merkle root, start time and duration
     /// @param _token Token address to be distributed
-    /// @param _initialTotalAmount Initial Total amount of tokens to be distributed
-    constructor(address _owner, address _operator, address _token, uint256 _initialTotalAmount) {
+    constructor(address _owner, address _operator, address _token) {
         owner = _owner;
         operator = _operator;
         token = _token;
-        initialTotalAmount = _initialTotalAmount;
     }
 
-    /// @notice Set airdrop start time
+    // ============ Operator Functions ============
+
+    /// @notice Set airdrop start time and duration
     /// @dev Can be called multiple times by the operator with the following restrictions:
-    /// 1. Cannot be set if distribution has already started
-    /// 2. Start time must be greater than current block timestamp
-    /// 3. Start time must be less than or equal to current time + 90 days
-    /// 4. Can be set multiple times as long as distribution hasn't started
-    /// @param _startTime Start timestamp (must be in the future but within MAX_START_TIME)
-    function setTime(uint256 _startTime) external onlyOperator {
+    /// 1. Cannot be set if distribution is currently active (between startTime and endTime)
+    /// 2. Start time must be greater than current block timestamp and not greater than 90 days from current time
+    /// 3. Duration must be greater than 0 and not greater than MAX_DURATION (365 days)
+    /// 4. Can be set multiple times before distribution starts or after it ends
+    /// @param _startTime Start timestamp (must be in the future)
+    /// @param _duration Distribution period duration in seconds (must be ≤ MAX_DURATION)
+    function setTime(uint256 _startTime, uint256 _duration) external onlyOperator {
+        if (_duration == 0 || _duration > MAX_DURATION) revert InvalidDuration();
         if (_startTime <= block.timestamp) revert InvalidTime();
         if (_startTime > block.timestamp + MAX_START_TIME) revert InvalidTime();
-        if (block.timestamp >= startTime && startTime > 0) revert AlreadyStarted();
+        if (block.timestamp >= startTime && block.timestamp <= endTime) revert AlreadyStarted();
 
         startTime = uint64(_startTime);
-        endTime = uint64(_startTime + DURATION);
+        endTime = uint64(_startTime + _duration);
 
         emit TimeSet(startTime, endTime);
     }
@@ -135,8 +144,10 @@ contract TokenDistributor is ReentrancyGuard {
         emit MerkleRootSet(_merkleRoot);
     }
 
+    // ============ Owner Functions ============
+
     /// @notice Withdraw remaining tokens after distribution ends
-    /// @dev Can only be called by owner after the distribution period ends or not set the startTime
+    /// @dev Can only be called by owner after the distribution period ends or before any distribution has started 
     function withdraw() external onlyOwner {
         // Check if distribution has ended or not set the startTime
         if (block.timestamp <= endTime) revert InvalidTime();
@@ -148,6 +159,8 @@ contract TokenDistributor is ReentrancyGuard {
 
         emit Withdrawn(msg.sender, balance);
     }
+
+    // ============ User Functions ============
 
     /// @notice Claim reward tokens using merkle proof
     /// @dev Supports single claim (when root set once) or incremental distributions
@@ -187,7 +200,8 @@ contract TokenDistributor is ReentrancyGuard {
         emit Claimed(msg.sender, pendingAmount);
     }
 
-    
+    // ============ Internal Functions ============
+
     /// @notice Get the balance of the contract
     function getBalance() internal view returns (uint256) {
         if (token == ETH_ADDRESS) {
@@ -200,12 +214,14 @@ contract TokenDistributor is ReentrancyGuard {
     /// @notice Transfer tokens to a given address
     function transfer(address to, uint256 amount) internal {
         if (token == ETH_ADDRESS) {
-            (bool success, ) = payable(to).call{value: amount, gas: 5000}("");
+            (bool success, ) = payable(to).call{value: amount}("");
             if (!success) revert NativeSendFailed();
         } else {
             IERC20(token).safeTransfer(to, amount);
         }
     }
+
+    // ============ Receive Function ============
 
     /// @dev Accept Native Token
     receive() external payable {

@@ -205,8 +205,8 @@ contract DistributorTest is Test {
         assertEq(distributor.owner(), owner);
         assertEq(distributor.operator(), operator);
         assertEq(distributor.token(), address(token));
-        assertEq(distributor.initialTotalAmount(), TOTAL_AMOUNT);
-
+        // Check Balance of distributor
+        assertEq(token.balanceOf(distributorAddress), TOTAL_AMOUNT);
         vm.stopPrank();
     }
 
@@ -217,7 +217,7 @@ contract DistributorTest is Test {
         uint256 futureTime = block.timestamp + 1 days;
 
         vm.prank(operator);
-        distributor.setTime(futureTime);
+        distributor.setTime(futureTime, 14 days);
 
         assertEq(distributor.startTime(), futureTime);
         assertEq(distributor.endTime(), futureTime + 14 days);
@@ -229,7 +229,7 @@ contract DistributorTest is Test {
 
         vm.prank(user1);
         vm.expectRevert(TokenDistributor.OnlyOperator.selector);
-        distributor.setTime(block.timestamp + 1 days);
+        distributor.setTime(block.timestamp + 1 days, 14 days);
     }
 
     function test_SetStartTime_AlreadyStarted() public {
@@ -240,7 +240,7 @@ contract DistributorTest is Test {
 
         // Set initial time
         vm.prank(operator);
-        distributor.setTime(futureTime);
+        distributor.setTime(futureTime, 14 days);
 
         // Fast forward to start time (distribution starts)
         vm.warp(futureTime);
@@ -248,7 +248,7 @@ contract DistributorTest is Test {
         // Try to set time again after distribution started
         vm.prank(operator);
         vm.expectRevert(TokenDistributor.AlreadyStarted.selector);
-        distributor.setTime(futureTime + 1 days);
+        distributor.setTime(futureTime + 1 days, 14 days);
     }
 
     function test_SetStartTime_PastTime() public {
@@ -257,7 +257,7 @@ contract DistributorTest is Test {
 
         vm.prank(operator);
         vm.expectRevert(TokenDistributor.InvalidTime.selector);
-        distributor.setTime(block.timestamp - 1);
+        distributor.setTime(block.timestamp - 1, 14 days);
     }
 
     function test_SetStartTime_ExceedsMaxTimeLimit() public {
@@ -269,7 +269,7 @@ contract DistributorTest is Test {
 
         vm.prank(operator);
         vm.expectRevert(TokenDistributor.InvalidTime.selector);
-        distributor.setTime(invalidFutureTime);
+        distributor.setTime(invalidFutureTime, 14 days);
     }
 
     function test_SetStartTime_WithinMaxTimeLimit() public {
@@ -280,7 +280,7 @@ contract DistributorTest is Test {
         uint256 validFutureTime = block.timestamp + 90 days;
 
         vm.prank(operator);
-        distributor.setTime(validFutureTime);
+        distributor.setTime(validFutureTime, 14 days);
 
         assertEq(distributor.startTime(), validFutureTime);
         assertEq(distributor.endTime(), validFutureTime + 14 days);
@@ -296,19 +296,19 @@ contract DistributorTest is Test {
 
         // First setting
         vm.prank(operator);
-        distributor.setTime(firstTime);
+        distributor.setTime(firstTime, 14 days);
         assertEq(distributor.startTime(), firstTime);
         assertEq(distributor.endTime(), firstTime + 14 days);
 
         // Second setting (should overwrite)
         vm.prank(operator);
-        distributor.setTime(secondTime);
+        distributor.setTime(secondTime, 14 days);
         assertEq(distributor.startTime(), secondTime);
         assertEq(distributor.endTime(), secondTime + 14 days);
 
         // Third setting (should overwrite again)
         vm.prank(operator);
-        distributor.setTime(thirdTime);
+        distributor.setTime(thirdTime, 14 days);
         assertEq(distributor.startTime(), thirdTime);
         assertEq(distributor.endTime(), thirdTime + 14 days);
     }
@@ -370,7 +370,7 @@ contract DistributorTest is Test {
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -407,7 +407,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         bytes32[] memory proof = new bytes32[](0);
 
@@ -423,7 +423,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         // Fast forward past end time
         vm.warp(startTime + 15 days);
@@ -442,7 +442,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.warp(startTime + 1 hours);
 
@@ -461,7 +461,7 @@ contract DistributorTest is Test {
         bytes32 merkleRoot = keccak256("test");
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -483,7 +483,7 @@ contract DistributorTest is Test {
         bytes32 merkleRoot = keccak256("different");
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -505,7 +505,7 @@ contract DistributorTest is Test {
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -533,7 +533,7 @@ contract DistributorTest is Test {
         uint256 maxAmount = 200 * 10 ** 18;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.warp(startTime + 1 hours);
 
@@ -571,7 +571,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         // Fast forward past end time
         vm.warp(startTime + 15 days);
@@ -593,7 +593,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.warp(startTime + 15 days);
 
@@ -624,7 +624,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.warp(startTime + 1 days); // During airdrop period (before end time)
 
@@ -647,7 +647,7 @@ contract DistributorTest is Test {
         bytes32 merkleRoot = keccak256(abi.encodePacked(user1, USER_AMOUNT));
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         vm.prank(operator);
         distributor.setMerkleRoot(merkleRoot);
@@ -692,7 +692,7 @@ contract DistributorTest is Test {
         uint256 startTime = block.timestamp + 1 hours;
 
         vm.prank(operator);
-        distributor.setTime(startTime);
+        distributor.setTime(startTime, 14 days);
 
         // Set up different amounts for different users
         uint256 user1Amount = 1000 * 10 ** 18;
@@ -737,5 +737,17 @@ contract DistributorTest is Test {
         assertEq(distributor.claimedAmounts(user1), user1Amount);
         assertEq(distributor.claimedAmounts(user2), user2Amount);
         assertEq(distributor.claimedAmounts(user3), user3Amount);
+    }
+
+    function test_SetTime_ZeroDuration_Fails() public {
+        address distributorAddress = _createDistributor();
+        TokenDistributor distributor = TokenDistributor(payable(distributorAddress));
+
+        uint256 validStartTime = block.timestamp + 1 hours;
+        
+        // Zero duration should fail
+        vm.prank(operator);
+        vm.expectRevert(TokenDistributor.InvalidDuration.selector);
+        distributor.setTime(validStartTime, 0);
     }
 }
