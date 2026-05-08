@@ -13,7 +13,6 @@ out/
 .env
 
 node_modules
-.env
 
 # Hardhat files
 /cache
@@ -46,3 +45,4 @@ yarn.lock
 gas-reports
 .cursor
 docs
+.DS_Store
