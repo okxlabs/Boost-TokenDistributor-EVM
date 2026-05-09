@@ -1,0 +1,55 @@
+[profile.default]
+src = "contracts"
+out = "foundry-out"
+auto_detect_solc = true
+optimizer = true
+optimizer_runs = 10000
+via_ir = false
+ffi = true
+evm_version = "shanghai"
+use_literal_content=true
+
+additional_compiler_profiles = [ 
+    { name = "via-ir", via_ir = true},
+ ]
+compilation_restrictions = [
+    { paths = "test/DistributorTest.t.sol", via_ir = true },
+    { paths = "test/DistributorComplexTest.t.sol", via_ir = true },
+]
+
+fs_permissions = [
+    { access = "read-write", path = ".forge-snapshots/"}, 
+    { access = "read", path = "./foundry-out"},
+    { access = "read", path = "./scripts/config"},
+    { access = "read", path = "./deployments"}
+]
+
+[fuzz]
+runs = 2000
+seed = '0x1'
+
+[dependencies]
+
+[rpc_endpoints]
+localhost = "http://localhost:8545"
+eth = "https://eth-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+sepolia = "https://eth-sepolia.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+base = "https://rpc.ankr.com/base/${API_KEY_ANKR}"
+mode = "https://1rpc.io/mode"
+bsc = "https://bsc-dataseed1.defibit.io"
+ftm = "https://1rpc.io/ftm"
+linea = "https://rpc.linea.build"
+arb = "https://arb-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+op = "https://opt-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
+polygon = "https://rpc.ankr.com/polygon/${API_KEY_ANKR}"
+polygonzk = "https://rpc.ankr.com/polygon_zkevm/${API_KEY_ANKR}"
+scroll = "https://rpc.ankr.com/scroll/${API_KEY_ANKR}"
+taiko = "https://rpc.ankr.com/taiko/${API_KEY_ANKR}"
+
+[profile.ci]
+fuzz_runs = 10000
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+# LIB
+# Refer to .gitmodules.
